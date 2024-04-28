@@ -18,30 +18,52 @@ lsdb = rpc.get_lsdb(filename=fr"{first_example_dir}/18-node-isis-w-bcast-segment
 
 # Create a graph from the lsdb
 graph = graphing.build_nx_from_lsdb(lsdb).to_undirected()
-#graphing.draw_pyplot_graph(graph)
 
-routers = []
+# All routers of the lab, the dict is defined like: {"name_of_the_machine": [machine, number_of_the_next_port_to_use]}
+routers = {}
 
 for node in graph.nodes(data=True):
     if node[1]["lsa"]!=None:
-        routers.append(lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"}))
-        print(f"aggiunto {node[0]} al lab")    
-        neig = [n for n in graph.neighbors(node[0])]
-        print(neig)
-        break
+        # Creating new machine for each node and add adding it to the dict "routers"
+        routers.update({f"{node[0]}" : [lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"}) , 0]})
+        
+ch = "I"
 
-
-#fs = open_fs(fr"osfs://C:\Users\lolli\Desktop\kathara_digital_twin\lab")
-#copy_fs(lab.fs, fs)
-
-
-"""for edge in graph.edges(data=True):
+for edge in graph.edges(data=True):
     if edge[2]["lsa"]["linkDescriptor"]:
-        print(f"{edge[:2]}", edge[2]["lsa"]["linkDescriptor"])
-"""
+        
+        # Starting the process to connect the two routers of the edge to the same collision domain
+        r1=routers[f"{edge[1]}"]
+        r1_ip = edge[2]["lsa"]["linkDescriptor"]["interfaceAddrIpv4"]
+        r2=routers[f"{edge[0]}"]
+        r2_ip = edge[2]["lsa"]["linkDescriptor"]["neighborAddrIpv4"]
+        
+        # Connecting first router
+        lab.connect_machine_to_link(r1[0].name, ch)
+        
+        # Updating (or creating if it doesn't exist) the startup file for the first router
+        r1[0].update_file_from_string(content=f"/sbin/ifconfig eth{r1[1]} {r1_ip} up\n", dst_path=f"/{r1[0].name}.startup")
+        r1[1] += 1 # Update the next free interface
+        
+        # Connecting second router 
+        lab.connect_machine_to_link(r2[0].name, ch)
+        
+        # Updating (or creating if it doesn't exist) the startup file for the second router
+        r2[0].update_file_from_string(content=f"/sbin/ifconfig eth{r2[1]} {r2_ip} up\n", dst_path=f"/{r2[0].name}.startup")
+        r2[1] += 1 # Update the next free interface
+        
+        ch += "I" # Update the name for the next domain
+        
+        #print(f"{edge[:2]}", edge[2]["lsa"]["linkDescriptor"]) 
+    
+fs = open_fs(fr"osfs://C:\Users\lolli\Desktop\kathara_digital_twin\lab")
+copy_fs(lab.fs, fs)
 
 # Deploy lab
-#Kathara.get_instance().deploy_lab(lab=lab)
+Kathara.get_instance().deploy_lab(lab=lab)
+
+# Connecting to the machine P8 wich is connected to the collision domain 'I'
+Kathara.get_instance().connect_tty("p8", lab_name=lab.name)
 
 # Undeploy lab
-#Kathara.get_instance().undeploy_lab(lab=lab)
+Kathara.get_instance().undeploy_lab(lab=lab)
