@@ -42,20 +42,36 @@ for edge in graph.edges(data=True):
         lab.connect_machine_to_link(r1[0].name, ch)
         
         # Updating (or creating if it doesn't exist) the startup file for the first router
-        r1[0].update_file_from_string(content=f"/sbin/ifconfig eth{r1[1]} {r1_ip} up\n", dst_path=f"/{r1[0].name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1[1]} {r1_ip} up\n", dst_path=f"{r1[0].name}.startup")
         r1[1] += 1 # Update the next free interface
         
         # Connecting second router 
         lab.connect_machine_to_link(r2[0].name, ch)
         
         # Updating (or creating if it doesn't exist) the startup file for the second router
-        r2[0].update_file_from_string(content=f"/sbin/ifconfig eth{r2[1]} {r2_ip} up\n", dst_path=f"/{r2[0].name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2[1]} {r2_ip} up\n", dst_path=f"{r2[0].name}.startup")
         r2[1] += 1 # Update the next free interface
         
         ch += "I" # Update the name for the next domain
         
         #print(f"{edge[:2]}", edge[2]["lsa"]["linkDescriptor"]) 
+  
+for edge in graph.edges(data=True):
+    if not edge[2]["lsa"]["linkDescriptor"]:
+        # Adding machines to collision domain with more than two routers connected
+        r = routers[f"{edge[1]}"]
+        r_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
+        lab.connect_machine_to_link(r[0].name, ch)
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r[1]} {r_ip}/24 up\n", dst_path=f"{r[0].name}.startup")
+        r[1] += 1
+
+ch += "I"
+
+for r in routers:
+    # Creating new machine for each node and add adding it to the dict "routers"
+    lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r][0].name}.startup")
     
+           
 fs = open_fs(fr"osfs://C:\Users\lolli\Desktop\kathara_digital_twin\lab")
 copy_fs(lab.fs, fs)
 
@@ -63,7 +79,7 @@ copy_fs(lab.fs, fs)
 Kathara.get_instance().deploy_lab(lab=lab)
 
 # Connecting to the machine P8 wich is connected to the collision domain 'I'
-Kathara.get_instance().connect_tty("p8", lab_name=lab.name)
+Kathara.get_instance().connect_tty("p18", lab_name=lab.name)
 
 # Undeploy lab
 Kathara.get_instance().undeploy_lab(lab=lab)
