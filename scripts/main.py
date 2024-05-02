@@ -5,6 +5,7 @@ import bgp_ls_vis.graphing as graphing
 import networkx as nx
 from fs import open_fs
 from fs.copy import copy_fs
+import functions
 
 # Create lab
 lab = Lab("18_nodes_twin")
@@ -19,15 +20,15 @@ lsdb = rpc.get_lsdb(filename=fr"{first_example_dir}/18-node-isis-w-bcast-segment
 # Create a graph from the lsdb
 graph = graphing.build_nx_from_lsdb(lsdb).to_undirected()
 
-# All routers of the lab, the dict is defined like: {"name_of_the_machine": [machine, number_of_the_next_port_to_use]}
+# All routers of the lab, the dict is defined like: {"name_of_the_machine": kathara_machine}
 routers = {}
 
 for node in graph.nodes(data=True):
     if node[1]["lsa"]!=None:
         # Creating new machine for each node and add adding it to the dict "routers"
-        routers.update({f"{node[0]}" : [lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"}) , 0]})
+        routers.update({f"{node[0]}" : lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"})})
         
-ch = "I"
+collision_domain = 0
 
 for edge in graph.edges(data=True):
     if edge[2]["lsa"]["linkDescriptor"]:
@@ -39,37 +40,32 @@ for edge in graph.edges(data=True):
         r2_ip = edge[2]["lsa"]["linkDescriptor"]["neighborAddrIpv4"]
         
         # Connecting first router
-        lab.connect_machine_to_link(r1[0].name, ch)
+        lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
         
         # Updating (or creating if it doesn't exist) the startup file for the first router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1[1]} {r1_ip} up\n", dst_path=f"{r1[0].name}.startup")
-        r1[1] += 1 # Update the next free interface
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip} up\n", dst_path=f"{r1.name}.startup")
         
         # Connecting second router 
-        lab.connect_machine_to_link(r2[0].name, ch)
+        lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain))
         
         # Updating (or creating if it doesn't exist) the startup file for the second router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2[1]} {r2_ip} up\n", dst_path=f"{r2[0].name}.startup")
-        r2[1] += 1 # Update the next free interface
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip} up\n", dst_path=f"{r2.name}.startup")
         
-        ch += "I" # Update the name for the next domain
-        
-        #print(f"{edge[:2]}", edge[2]["lsa"]["linkDescriptor"]) 
+        collision_domain += 1 # Update the name for the next domain
   
 for edge in graph.edges(data=True):
     if not edge[2]["lsa"]["linkDescriptor"]:
         # Adding machines to collision domain with more than two routers connected
         r = routers[f"{edge[1]}"]
         r_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
-        lab.connect_machine_to_link(r[0].name, ch)
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r[1]} {r_ip}/24 up\n", dst_path=f"{r[0].name}.startup")
-        r[1] += 1
+        lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/24 up\n", dst_path=f"{r.name}.startup")
 
-ch += "I"
+collision_domain += 1
 
 for r in routers:
     # Creating new machine for each node and add adding it to the dict "routers"
-    lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r][0].name}.startup")
+    lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r].name}.startup")
     
            
 fs = open_fs(fr"osfs://C:\Users\lolli\Desktop\kathara_digital_twin\lab")
@@ -79,7 +75,9 @@ copy_fs(lab.fs, fs)
 Kathara.get_instance().deploy_lab(lab=lab)
 
 # Connecting to the machine P8 wich is connected to the collision domain 'I'
-Kathara.get_instance().connect_tty("p18", lab_name=lab.name)
+#Kathara.get_instance().connect_tty("p18", lab_name=lab.name)
 
 # Undeploy lab
 Kathara.get_instance().undeploy_lab(lab=lab)
+
+print(routers["P14"])
