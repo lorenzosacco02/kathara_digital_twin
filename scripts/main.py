@@ -6,16 +6,25 @@ import networkx as nx
 from fs import open_fs
 from fs.copy import copy_fs
 import functions
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--file", help="the absolute path of the file .yaml to load")
+parser.add_argument("-d", "--directory", help="the directory where you want to save the fs of the lab")
+args = parser.parse_args()
 
 # Create lab
-lab = Lab("18_nodes_twin")
+lab = Lab("digital_twin")
 
 # To load a BGP-LS table from file instead of a gRPC connection, `connect` param is set false
 rpc = proto.GoBGPQueryWrapper(connect=False)
 
 # Calling get_lsdb with param `filename` set will trigger loading from file instead of RPC
-first_example_dir = r"C:/Users/lolli/Desktop/kathara_digital_twin/dumps"
-lsdb = rpc.get_lsdb(filename=fr"{first_example_dir}/18-node-isis-w-bcast-segment.yaml")
+if args.file:
+    lsdb = rpc.get_lsdb(filename=fr"{args.file}")
+else:
+    first_example_dir = r"C:/Users/lolli/Desktop/kathara_digital_twin/dumps"
+    lsdb = rpc.get_lsdb(filename=fr"{first_example_dir}/18-node-isis-w-bcast-segment.yaml")
 
 # Create a graph from the lsdb
 graph = graphing.build_nx_from_lsdb(lsdb).to_undirected()
@@ -59,7 +68,7 @@ for edge in graph.edges(data=True):
         r = routers[f"{edge[1]}"]
         r_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
         lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/24 up\n", dst_path=f"{r.name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/32 up\n", dst_path=f"{r.name}.startup")
 
 collision_domain += 1
 
@@ -67,15 +76,16 @@ for r in routers:
     # Creating new machine for each node and add adding it to the dict "routers"
     lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r].name}.startup")
     
-           
-fs = open_fs(fr"osfs://C:\Users\lolli\Desktop\kathara_digital_twin\lab")
-copy_fs(lab.fs, fs)
+if args.directory:
+    # Copy the fs of the lab in the folder specified in command line (absolute path)           
+    fs = open_fs(fr"osfs://{args.directory}")   
+    copy_fs(lab.fs, fs)
 
 # Deploy lab
 Kathara.get_instance().deploy_lab(lab=lab)
 
 # Connecting to the machine P8 wich is connected to the collision domain 'I'
-#Kathara.get_instance().connect_tty("p18", lab_name=lab.name)
+Kathara.get_instance().connect_tty("p8", lab_name=lab.name)
 
 # Undeploy lab
 Kathara.get_instance().undeploy_lab(lab=lab)
