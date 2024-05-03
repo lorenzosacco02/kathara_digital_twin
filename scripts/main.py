@@ -25,8 +25,8 @@ if args.file:
     lsdb = rpc.get_lsdb(filename=fr"{args.file}")
 else:
     # correct way but now does't work
-    # lsdb = rpc.get_lsdb(os.path.join("dumps","18-node-isis-w-bcast-segment.yaml"))
-    lsdb = rpc.get_lsdb(r"C:\Users\lolli\Desktop\kathara_digital_twin\dumps\18-node-isis-w-bcast-segment.yaml")
+    lsdb = rpc.get_lsdb(os.path.join(os.getcwd(),"dumps","18-node-isis-w-bcast-segment.yaml"))
+    # lsdb = rpc.get_lsdb(r"C:\Users\lolli\Desktop\kathara_digital_twin\dumps\18-node-isis-w-bcast-segment.yaml")
 
 # Create a graph from the lsdb
 graph = graphing.build_nx_from_lsdb(lsdb).to_undirected()
