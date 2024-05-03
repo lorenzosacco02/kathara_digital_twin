@@ -3,6 +3,7 @@ from Kathara.manager.Kathara import Kathara
 import bgp_ls_vis.proto as proto
 import bgp_ls_vis.graphing as graphing
 import networkx as nx
+import os
 from fs import open_fs
 from fs.copy import copy_fs
 import functions
@@ -23,8 +24,8 @@ rpc = proto.GoBGPQueryWrapper(connect=False)
 if args.file:
     lsdb = rpc.get_lsdb(filename=fr"{args.file}")
 else:
-    first_example_dir = r"C:/Users/lolli/Desktop/kathara_digital_twin/dumps"
-    lsdb = rpc.get_lsdb(filename=fr"{first_example_dir}/18-node-isis-w-bcast-segment.yaml")
+    print(os.path.join("dumps","18-node-isis-w-bcast-segment.yaml"))
+    lsdb = rpc.get_lsdb(os.path)
 
 # Create a graph from the lsdb
 graph = graphing.build_nx_from_lsdb(lsdb).to_undirected()
@@ -82,12 +83,12 @@ if args.directory:
     copy_fs(lab.fs, fs)
 
 # Deploy lab
-Kathara.get_instance().deploy_lab(lab=lab)
+#Kathara.get_instance().deploy_lab(lab=lab)
 
 # Connecting to the machine P8 wich is connected to the collision domain 'I'
-Kathara.get_instance().connect_tty("p8", lab_name=lab.name)
+#Kathara.get_instance().connect_tty("p8", lab_name=lab.name)
 
 # Undeploy lab
-Kathara.get_instance().undeploy_lab(lab=lab)
+#Kathara.get_instance().undeploy_lab(lab=lab)
 
 print(routers["P14"])
