@@ -37,7 +37,11 @@ routers = {}
 for node in graph.nodes(data=True):
     if node[1]["lsa"]!=None:
         # Creating new machine for each node and add adding it to the dict "routers"
-        routers.update({f"{node[0]}" : lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"})})
+        try:
+            routers.update({f"{node[0]}" : lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"})})
+        except Exception as e:
+            # Changing the name of the machine to an accepted one 
+            routers.update({f"{node[0]}" : lab.new_machine(f"{functions.invalid_to_valid_name(node[0].lower())}", **{"image": "kathara/frr"})})
         
 collision_domain = 0
 
@@ -92,4 +96,4 @@ if args.directory:
 # Undeploy lab
 #Kathara.get_instance().undeploy_lab(lab=lab)
 
-print(routers["P14"])
+#print(routers)
