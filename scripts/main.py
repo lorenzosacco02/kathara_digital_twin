@@ -79,8 +79,9 @@ for edge in graph.edges(data=True):
 collision_domain += 1
 
 for r in routers:
-    # Creating new machine for each node and add adding it to the dict "routers"
+    # updating startup files to allow frr starting
     lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r].name}.startup")
+
 
     # Configuring the daemons
     routers[r].create_file_from_list(
@@ -90,6 +91,7 @@ for r in routers:
         ],
         dst_path= "/etc/frr/daemons"
     )
+    
     
     # Starting configuration of zebra
     routers[r].create_file_from_list(
@@ -107,7 +109,26 @@ for r in routers:
             # Update the zebra.conf file with the ip addresses
             functions.configure_zebra(routers[r], words_of_the_line)
     
+    igpRouterId = graph.nodes.get(r)["prefixes"][0]["localNode"]["igpRouterId"]
     
+    # Starting configuration of isis
+    routers[r].create_file_from_list(
+        lines=[
+        "router isis 1",
+        f"49.0000.{igpRouterId}.00"
+        ],
+        dst_path= "/etc/frr/isisd.conf"
+    )
+    for interface in routers[r].interfaces:
+        routers[r].update_file_from_list(
+            lines=[
+                "",
+                f"interface eth{interface}",
+                " ip router isis 1"
+            ],
+            dst_path= "etc/frr/isisd.conf")
+
+   
 if args.directory:
     # Copy the fs of the lab in the folder specified in command line (absolute path)           
     fs = open_fs(fr"osfs://{args.directory}")   
