@@ -58,13 +58,13 @@ for edge in graph.edges(data=True):
         lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
         
         # Updating (or creating if it doesn't exist) the startup file for the first router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip} up\n", dst_path=f"{r1.name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/30 up\n", dst_path=f"{r1.name}.startup")
         
         # Connecting second router 
         lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain))
         
         # Updating (or creating if it doesn't exist) the startup file for the second router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip} up\n", dst_path=f"{r2.name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip}/30 up\n", dst_path=f"{r2.name}.startup")
         
         collision_domain += 1 # Update the name for the next domain
   
@@ -74,13 +74,39 @@ for edge in graph.edges(data=True):
         r = routers[f"{edge[1]}"]
         r_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
         lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/32 up\n", dst_path=f"{r.name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/30 up\n", dst_path=f"{r.name}.startup")
 
 collision_domain += 1
 
 for r in routers:
     # Creating new machine for each node and add adding it to the dict "routers"
     lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r].name}.startup")
+
+    # Configuring the daemons
+    routers[r].create_file_from_list(
+        lines=[
+        "zebra=yes",
+        "isisd=yes"
+        ],
+        dst_path= "/etc/frr/daemons"
+    )
+    
+    # Starting configuration of zebra
+    routers[r].create_file_from_list(
+        lines=[
+        "hostname frr",
+        "password frr",
+        "enable password frr" 
+        ],
+        dst_path= "/etc/frr/zebra.conf"
+    )
+    # Looking for the ip addresses of the interfaces in the startup files of the fs
+    with lab.fs.open(f"{routers[r].name}.startup") as file:
+        for line in file:
+            words_of_the_line = line.strip().split()
+            # Update the zebra.conf file with the ip addresses
+            functions.configure_zebra(routers[r], words_of_the_line)
+    
     
 if args.directory:
     # Copy the fs of the lab in the folder specified in command line (absolute path)           
@@ -96,4 +122,4 @@ if args.directory:
 # Undeploy lab
 #Kathara.get_instance().undeploy_lab(lab=lab)
 
-#print(routers)
+#print(routers["P7"])
