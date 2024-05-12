@@ -58,13 +58,13 @@ for edge in graph.edges(data=True):
         lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
         
         # Updating (or creating if it doesn't exist) the startup file for the first router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/30 up\n", dst_path=f"{r1.name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/24 up\n", dst_path=f"{r1.name}.startup")
         
         # Connecting second router 
         lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain))
         
         # Updating (or creating if it doesn't exist) the startup file for the second router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip}/30 up\n", dst_path=f"{r2.name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip}/24 up\n", dst_path=f"{r2.name}.startup")
         
         collision_domain += 1 # Update the name for the next domain
   
@@ -74,7 +74,7 @@ for edge in graph.edges(data=True):
         r = routers[f"{edge[1]}"]
         r_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
         lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/30 up\n", dst_path=f"{r.name}.startup")
+        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/24 up\n", dst_path=f"{r.name}.startup")
 
 collision_domain += 1
 
@@ -98,7 +98,8 @@ for r in routers:
         lines=[
         "hostname frr",
         "password frr",
-        "enable password frr" 
+        "enable password frr",
+        "" 
         ],
         dst_path= "/etc/frr/zebra.conf"
     )
@@ -124,11 +125,12 @@ for r in routers:
             lines=[
                 "",
                 f"interface eth{interface}",
-                " ip router isis 1"
+                " ip router isis 1",
+                ""
             ],
             dst_path= "etc/frr/isisd.conf")
 
-   
+
 if args.directory:
     # Copy the fs of the lab in the folder specified in command line (absolute path)           
     fs = open_fs(fr"osfs://{args.directory}")   

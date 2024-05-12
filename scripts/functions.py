@@ -14,7 +14,8 @@ def configure_zebra(router, words):
                 router.update_file_from_list(
                 lines=[
                 f"interface {words[1]}",
-                f" ip address {words[2]}" 
+                f" ip address {words[2]}",
+                "" 
                 ],
                 dst_path= "/etc/frr/zebra.conf"
                 )
