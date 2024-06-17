@@ -111,12 +111,13 @@ for r in routers:
             functions.configure_zebra(routers[r], words_of_the_line)
     
     igpRouterId = graph.nodes.get(r)["prefixes"][0]["localNode"]["igpRouterId"]
+    igpArea = graph.nodes.get(r)["lsa"]["lsattribute"]["node"]["isisArea"]
     
     # Starting configuration of isis
     routers[r].create_file_from_list(
         lines=[
-        "router isis 1",
-        f"49.0000.{igpRouterId}.00"
+        f"router isis {igpArea}",
+        f" net 49.0000.{igpRouterId}.00"
         ],
         dst_path= "/etc/frr/isisd.conf"
     )
@@ -125,7 +126,7 @@ for r in routers:
             lines=[
                 "",
                 f"interface eth{interface}",
-                " ip router isis 1",
+                f" ip router isis {igpArea}",
                 ""
             ],
             dst_path= "etc/frr/isisd.conf")
@@ -144,5 +145,3 @@ if args.directory:
 
 # Undeploy lab
 #Kathara.get_instance().undeploy_lab(lab=lab)
-
-#print(routers["P7"])

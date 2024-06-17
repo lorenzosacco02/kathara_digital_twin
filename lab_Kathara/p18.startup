@@ -1,0 +1,4 @@
+/sbin/ifconfig eth0 10.16.18.18/24 up
+/sbin/ifconfig eth1 10.17.18.18/24 up
+/sbin/ifconfig eth2 2.90.0.18/24 up
+/etc/init.d/frr start
