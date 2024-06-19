@@ -1,4 +1,4 @@
-/sbin/ifconfig eth0 10.11.12.11/24 up
-/sbin/ifconfig eth1 10.7.11.11/24 up
-/sbin/ifconfig eth2 10.11.17.11/24 up
-/etc/init.d/frr start
+ip address add 10.11.12.11/24 dev eth0
+ip address add 10.7.11.11/24 dev eth1
+ip address add 10.11.17.11/24 dev eth2
+systemctl start frr
