@@ -1,0 +1,10 @@
+networkx==2.5  
+matplotlib==3.3.2
+PyYAML==5.3.1
+dash==1.18.1
+plotly==4.14.1
+google-api-python-client==2.130.0
+grpcio==1.64.0
+grpcio-tools==1.64.0
+dash-cytoscape==0.2.0
+pandas==2.2.1
