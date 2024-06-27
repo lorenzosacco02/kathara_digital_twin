@@ -4,7 +4,7 @@ PyYAML==5.3.1
 dash==1.18.1
 plotly==4.14.1
 google-api-python-client==2.130.0
-grpcio==1.64.0
-grpcio-tools==1.64.0
+grpcio
+grpcio-tools
 dash-cytoscape==0.2.0
-pandas==2.2.1
+pandas
