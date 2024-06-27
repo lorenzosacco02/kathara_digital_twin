@@ -2,4 +2,5 @@ ip address add 10.1.2.2/24 dev eth0
 ip address add 10.2.3.2/24 dev eth1
 ip address add 100.100.0.2/24 dev eth2
 ip address add 192.168.0.2/32 dev lo
-systemctl start frr
+/etc/init.d/frr start
+gobgpd -f bgpd.conf
