@@ -66,6 +66,21 @@ for edge in graph.edges(data=True):
         # Updating (or creating if it doesn't exist) the startup file for the second router
         lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip}/24 up\n", dst_path=f"{r2.name}.startup")
         
+        try:
+            lab.update_file_from_list(
+                lines=[
+                    f"{r1.name}[{r1.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                    f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                ],
+                dst_path="lab.conf")
+        except:
+            lab.create_file_from_list(
+                lines=[
+                    f"{r1.name}[{r1.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                    f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                ],
+                dst_path="lab.conf")
+            
         collision_domain += 1 # Update the name for the next domain
   
 for edge in graph.edges(data=True):
@@ -75,7 +90,7 @@ for edge in graph.edges(data=True):
         r_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
         lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
         lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/24 up\n", dst_path=f"{r.name}.startup")
-
+                       
 collision_domain += 1
 
 for r in routers:
@@ -130,6 +145,24 @@ for r in routers:
                 ""
             ],
             dst_path= "etc/frr/isisd.conf")
+        
+    lab.update_file_from_list(
+            lines=[
+                f"{routers[r].name}[image]=kathara/frr",
+                f"{routers[r].name}[ipv6]=false",
+                f"{routers[r].name}[num_terms]=0",
+            ],
+            dst_path="lab.conf")
+
+
+lab.update_file_from_list(
+            lines=[
+                "wireshark[bridged]=true",
+                "wireshark[port]=\"3000:3000\"",
+                "wireshark[image]=\"lscr.io/linuxserver/wireshark\"",
+                "wireshark[num_terms]=0",
+            ],
+            dst_path="lab.conf")
 
 
 if args.directory:
