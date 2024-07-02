@@ -35,37 +35,105 @@ graph = graphing.build_nx_from_lsdb(lsdb).to_undirected()
 routers = {}
 
 for node in graph.nodes(data=True):
-    if node[1]["lsa"]!=None:
-        # Creating new machine for each node and add adding it to the dict "routers"
-        try:
-            routers.update({f"{node[0]}" : lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"})})
-        except Exception as e:
-            # Changing the name of the machine to an accepted one 
-            routers.update({f"{node[0]}" : lab.new_machine(f"{functions.invalid_to_valid_name(node[0].lower())}", **{"image": "kathara/frr"})})
-        
+    # Creating new machine for each node and add adding it to the dict "routers"
+    try:
+        routers.update({f"{node[0]}" : lab.new_machine(f"{node[0].lower()}", **{"image": "kathara/frr"})})
+    except Exception as e:
+        # Changing the name of the machine to an accepted one 
+        routers.update({f"{node[0]}" : lab.new_machine(f"{functions.invalid_to_valid_name(node[0].lower())}", **{"image": "kathara/frr"})})   
+
 collision_domain = 0
 
 for edge in graph.edges(data=True):
-    if edge[2]["lsa"]["linkDescriptor"]:
-        
-        # Starting the process to connect the two routers of the edge to the same collision domain
-        r1=routers[f"{edge[1]}"]
-        r1_ip = edge[2]["lsa"]["linkDescriptor"]["interfaceAddrIpv4"]
-        r2=routers[f"{edge[0]}"]
-        r2_ip = edge[2]["lsa"]["linkDescriptor"]["neighborAddrIpv4"]
-        
-        # Connecting first router
-        lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
-        
-        # Updating (or creating if it doesn't exist) the startup file for the first router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/24 up\n", dst_path=f"{r1.name}.startup")
-        
-        # Connecting second router 
-        lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain))
-        
-        # Updating (or creating if it doesn't exist) the startup file for the second router
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip}/24 up\n", dst_path=f"{r2.name}.startup")
-        
+    if edge[2]["pseudonode"]:
+        # Adding machines to collision domain with more than two routers connected
+        try:
+            edge[2]["lsa"]["localNode"]["pseudonode"]
+
+            r1 = routers[f"{edge[0]}"]
+            r1_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
+            lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
+            lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/24 up\n", dst_path=f"{r1.name}.startup")
+
+            r2 = routers[f"{edge[1]}"]
+            lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
+
+        except Exception as e:
+            if("pseudonode" in str(e)):
+                r1 = routers[f"{edge[1]}"]
+                r1_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
+                lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
+                lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/24 up\n", dst_path=f"{r1.name}.startup")
+
+                r2 = routers[f"{edge[0]}"]
+                lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain)) 
+
+                try:
+                    lab.update_file_from_list(
+                        lines=[
+                            f"{r1.name}[{r1.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                            f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                        ],
+                        dst_path="lab.conf")
+                except:
+                    lab.create_file_from_list(
+                        lines=[
+                            f"{r1.name}[{r1.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                            f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                        ],
+                        dst_path="lab.conf")
+            else:
+                r1 = routers[f"{edge[1]}"]
+                r1_ip = edge[2]["lsa"]["linkDescriptor"]["interfaceAddrIpv4"]
+                lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
+                lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/24 up\n", dst_path=f"{r1.name}.startup")
+
+                r2 = routers[f"{edge[0]}"]
+                lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain)) 
+
+                try:
+                    lab.update_file_from_list(
+                        lines=[
+                            f"{r1.name}[{r1.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                            f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                        ],
+                        dst_path="lab.conf")
+                except:
+                    lab.create_file_from_list(
+                        lines=[
+                            f"{r1.name}[{r1.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                            f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
+                        ],
+                        dst_path="lab.conf")
+       
+                
+    else:    
+        try:
+            # Starting the process to connect the first router of the edge to new collision domain
+            r1=routers[f"{edge[1]}"]
+            r1_ip = edge[2]["lsa"]["linkDescriptor"]["interfaceAddrIpv4"]
+            
+            # Connecting first router
+            lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
+            
+            # Updating (or creating if it doesn't exist) the startup file for the first router
+            lab.update_file_from_string(content=f"/sbin/ifconfig eth{r1.interfaces.__len__()-1} {r1_ip}/24 up\n", dst_path=f"{r1.name}.startup")
+        except: 
+            pass
+
+        try:        
+            # Starting the process to connect the second router of the edge to the same collision domain
+            r2=routers[f"{edge[0]}"]
+            r2_ip = edge[2]["lsa"]["linkDescriptor"]["neighborAddrIpv4"]
+
+            # Connecting second router 
+            lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain))
+            
+            # Updating (or creating if it doesn't exist) the startup file for the second router
+            lab.update_file_from_string(content=f"/sbin/ifconfig eth{r2.interfaces.__len__()-1} {r2_ip}/24 up\n", dst_path=f"{r2.name}.startup")
+        except:
+            pass
+
         try:
             lab.update_file_from_list(
                 lines=[
@@ -81,77 +149,79 @@ for edge in graph.edges(data=True):
                 ],
                 dst_path="lab.conf")
             
-        collision_domain += 1 # Update the name for the next domain
-  
-for edge in graph.edges(data=True):
-    if not edge[2]["lsa"]["linkDescriptor"]:
-        # Adding machines to collision domain with more than two routers connected
-        r = routers[f"{edge[1]}"]
-        r_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
-        lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
-        lab.update_file_from_string(content=f"/sbin/ifconfig eth{r.interfaces.__len__()-1} {r_ip}/24 up\n", dst_path=f"{r.name}.startup")
-                       
-collision_domain += 1
+    collision_domain += 1 # Update the name for the next domain
 
 for r in routers:
-    # updating startup files to allow frr starting
-    lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r].name}.startup")
+    if (not graph.nodes.get(r)["lsa"]) or ("pseudonode" in graph.nodes.get(r)["lsa"]["localNode"].keys()):
 
-
-    # Configuring the daemons
-    routers[r].create_file_from_list(
-        lines=[
-        "zebra=yes",
-        "isisd=yes"
-        ],
-        dst_path= "/etc/frr/daemons"
-    )
-    
-    
-    # Starting configuration of zebra
-    routers[r].create_file_from_list(
-        lines=[
-        "hostname frr",
-        "password frr",
-        "enable password frr",
-        "" 
-        ],
-        dst_path= "/etc/frr/zebra.conf"
-    )
-    # Looking for the ip addresses of the interfaces in the startup files of the fs
-    with lab.fs.open(f"{routers[r].name}.startup") as file:
-        for line in file:
-            words_of_the_line = line.strip().split()
-            # Update the zebra.conf file with the ip addresses
-            functions.configure_zebra(routers[r], words_of_the_line)
-            
-    igpRouterId = graph.nodes.get(r)["lsa"]["localNode"]["igpRouterId"]
-    igpArea = graph.nodes.get(r)["lsa"]["lsattribute"]["node"]["isisArea"]
-    # Starting configuration of isis
-    routers[r].create_file_from_list(
-        lines=[
-        f"router isis {igpArea}",
-        f" net 49.0000.{igpRouterId}.00"
-        ],
-        dst_path= "/etc/frr/isisd.conf"
-    )
-    for interface in routers[r].interfaces:
-        routers[r].update_file_from_list(
-            lines=[
-                "",
-                f"interface eth{interface}",
-                f" ip router isis {igpArea}",
-                ""
-            ],
-            dst_path= "etc/frr/isisd.conf")
+        lab.update_file_from_list(
+                lines=[
+                    f"{routers[r].name}[image]=kathara/base",
+                    f"{routers[r].name}[ipv6]=false",
+                    f"{routers[r].name}[num_terms]=0",
+                ],
+                dst_path="lab.conf")
         
-    lab.update_file_from_list(
+    else:    
+        # updating startup files to allow frr starting
+        lab.update_file_from_string(content="/etc/init.d/frr start\n", dst_path=f"{routers[r].name}.startup")
+
+
+        # Configuring the daemons
+        routers[r].create_file_from_list(
             lines=[
-                f"{routers[r].name}[image]=kathara/frr",
-                f"{routers[r].name}[ipv6]=false",
-                f"{routers[r].name}[num_terms]=0",
+            "zebra=yes",
+            "isisd=yes"
             ],
-            dst_path="lab.conf")
+            dst_path= "/etc/frr/daemons"
+        )
+        
+        
+        # Starting configuration of zebra
+        routers[r].create_file_from_list(
+            lines=[
+            "hostname frr",
+            "password frr",
+            "enable password frr",
+            "" 
+            ],
+            dst_path= "/etc/frr/zebra.conf"
+        )
+        # Looking for the ip addresses of the interfaces in the startup files of the fs
+        with lab.fs.open(f"{routers[r].name}.startup") as file:
+            for line in file:
+                words_of_the_line = line.strip().split()
+                # Update the zebra.conf file with the ip addresses
+                functions.configure_zebra(routers[r], words_of_the_line)
+        
+        igpRouterId = graph.nodes.get(r)["lsa"]["localNode"]["igpRouterId"]
+        igpArea = graph.nodes.get(r)["lsa"]["lsattribute"]["node"]["isisArea"]
+
+        # Starting configuration of isis
+        routers[r].create_file_from_list(
+            lines=[
+            f"router isis {igpArea}",
+            f" net 49.0000.{igpRouterId}.00"
+            ],
+            dst_path= "/etc/frr/isisd.conf"
+        )
+        for interface in routers[r].interfaces:
+            routers[r].update_file_from_list(
+                lines=[
+                    "",
+                    f"interface eth{interface}",
+                    f" ip router isis {igpArea}",
+                    ""
+                ],
+                dst_path= "etc/frr/isisd.conf")
+            
+        lab.update_file_from_list(
+                lines=[
+                    f"{routers[r].name}[image]=kathara/frr",
+                    f"{routers[r].name}[ipv6]=false",
+                    f"{routers[r].name}[num_terms]=0",
+                ],
+                dst_path="lab.conf")
 
 
 lab.update_file_from_list(
