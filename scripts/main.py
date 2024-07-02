@@ -124,10 +124,9 @@ for r in routers:
             words_of_the_line = line.strip().split()
             # Update the zebra.conf file with the ip addresses
             functions.configure_zebra(routers[r], words_of_the_line)
-    
-    igpRouterId = graph.nodes.get(r)["prefixes"][0]["localNode"]["igpRouterId"]
+            
+    igpRouterId = graph.nodes.get(r)["lsa"]["localNode"]["igpRouterId"]
     igpArea = graph.nodes.get(r)["lsa"]["lsattribute"]["node"]["isisArea"]
-    
     # Starting configuration of isis
     routers[r].create_file_from_list(
         lines=[
