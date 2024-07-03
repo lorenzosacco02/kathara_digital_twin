@@ -58,8 +58,8 @@ for edge in graph.edges(data=True):
             r2 = routers[f"{edge[1]}"]
             lab.connect_machine_to_link(r.name, functions.numbers_to_words(collision_domain))
 
-        except Exception as e:
-            if("pseudonode" in str(e)):
+        except:
+            try:
                 r1 = routers[f"{edge[1]}"]
                 r1_ip = edge[2]["lsa"]["lsattribute"]["node"]["localRouterId"]
                 lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
@@ -82,7 +82,7 @@ for edge in graph.edges(data=True):
                             f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
                         ],
                         dst_path="lab.conf")
-            else:
+            except:
                 r1 = routers[f"{edge[1]}"]
                 r1_ip = edge[2]["lsa"]["linkDescriptor"]["interfaceAddrIpv4"]
                 lab.connect_machine_to_link(r1.name, functions.numbers_to_words(collision_domain))
@@ -90,7 +90,7 @@ for edge in graph.edges(data=True):
 
                 r2 = routers[f"{edge[0]}"]
                 lab.connect_machine_to_link(r2.name, functions.numbers_to_words(collision_domain)) 
-
+                
                 try:
                     lab.update_file_from_list(
                         lines=[
@@ -105,7 +105,6 @@ for edge in graph.edges(data=True):
                             f"{r2.name}[{r2.interfaces.__len__()-1}]=\"{functions.numbers_to_words(collision_domain)}\"",
                         ],
                         dst_path="lab.conf")
-       
                 
     else:    
         try:
